@@ -1,0 +1,12 @@
+---
+- name: Crear carpeta en el servidor
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Crear /opt/hello
+      ansible.builtin.file:
+        path: /opt/hello
+        state: directory
+        mode: '0755'
