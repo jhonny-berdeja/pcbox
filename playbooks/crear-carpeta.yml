@@ -5,8 +5,7 @@
   gather_facts: false
 
   tasks:
-    - name: Crear /opt/hello
+    - name: Eliminar /opt/hello
       ansible.builtin.file:
         path: /opt/hello
-        state: directory
-        mode: '0755'
+        state: absent
