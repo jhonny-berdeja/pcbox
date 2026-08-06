@@ -2,6 +2,31 @@
 
 Configuración inicial que se hizo a mano, una sola vez, en el servidor `pcbox` para dejarlo listo y que GitHub Actions pueda desplegar sobre él vía Ansible.
 
+## 0. Instalación de Ubuntu Server
+
+Configuración elegida durante el instalador de Ubuntu Server:
+
+| Opción | Valor |
+|---|---|
+| Lenguaje | Español |
+| Teclado | Inglés EEUU (Internacional con teclas muertas) |
+| Tipo de instalación | Por defecto |
+| Comunicación con otros equipos | Type eth |
+| Proxy address | (vacío) |
+| Disco | Kingston |
+| Nombre | Jhonny Berdeja |
+| Nombre del server | pcbox |
+| Nombre de usuario | jhon |
+| Contraseña | (ver nota abajo) |
+
+Este usuario, `jhon`, es el que se usa en todos los pasos siguientes para conectarse por SSH — es el valor que va en el secret `SSH_USER`:
+
+```
+SSH_USER=jhon
+```
+
+> **Nota sobre la contraseña:** hay que guardarla para usarla en el paso 3 (copiar la clave pública con `ssh-copy-id`, que pide la contraseña una única vez) y en el paso 4 (entrar por SSH con contraseña antes de tener la clave configurada). Por seguridad, **no se guarda en texto plano en este documento ni en el repo** — guardarla en un gestor de contraseñas. Una vez configurada la clave SSH (paso 3) y el `sudo` sin contraseña (paso 4), esta contraseña deja de ser necesaria para el flujo automatizado.
+
 ## 1. Instalar OpenSSH en el Ubuntu Server
 
 Para poder conectarse por SSH a este servidor. Se hace conectándose directamente a la compu (teclado/monitor) o por la red local:
