@@ -88,17 +88,29 @@ defecto.
 
 ## Cómo se ejecutan
 
-Vía `.github/workflows/deploy.yml`, que corre:
+Vía `.github/workflows/deploy.yml`, en cada push a `master` (y manualmente
+vía `workflow_dispatch`), en dos jobs:
+
+1. **`lint`** (sin conexión al servidor, sin secrets de Tailscale/SSH):
+   instala `ansible` + `ansible-lint` y corre `ansible-lint` (perfil
+   default) sobre los playbooks cubiertos por el gate. Si falla, el job de
+   deploy no arranca (`needs: lint`).
+2. **`ansible-deploy`** (depende de `lint`): se conecta al servidor por
+   Tailscale y clave SSH, corre un paso `--check --diff` de visibilidad
+   (dry-run, no bloqueante) y recién después aplica los playbooks
+   encadenados en una sola invocación:
 
 ```bash
-ansible-playbook -i inventory/hosts.yml playbooks/<archivo>.yml -u "$SSH_USER" \
-  --private-key ~/.ssh/deploy_key -e "ansible_host=$SSH_HOST"
+ansible-playbook -i inventory/hosts.yml \
+  playbooks/add-configuration/create-folder-test.yml \
+  playbooks/installations/install-microk8s.yml \
+  -u "$SSH_USER" --private-key ~/.ssh/deploy_key -e "ansible_host=$SSH_HOST"
 ```
 
-en cada push a `master`. Hoy el workflow apunta a un único playbook
-(`add-configuration/create-folder-test.yml`) — si se agrega uno nuevo que
-también deba correr en cada deploy, hay que sumarlo (o reemplazarlo) ahí
-explícitamente.
+Hoy el workflow corre dos playbooks encadenados en esa misma invocación
+(`create-folder-test.yml` primero, sin modificar, seguido de
+`install-microk8s.yml`) — si se agrega uno nuevo que también deba correr en
+cada deploy, hay que sumarlo a esa lista explícitamente.
 
 ## Pedir aprobación antes de crear o modificar un playbook
 
