@@ -12,19 +12,22 @@ en [`inventory/hosts.yml`](../inventory/hosts.yml)). Un playbook = una
 responsabilidad concreta (instalar algo, configurar algo, eliminar algo) — no
 un "playbook maestro" que hace de todo.
 
-Ejemplo real, [`playbooks/crear-carpeta.yml`](../playbooks/crear-carpeta.yml):
+Ejemplo real, [`playbooks/add-configuration/create-folder-test.yml`](../playbooks/add-configuration/create-folder-test.yml):
 
 ```yaml
-- name: Crear carpeta en el servidor
-  hosts: all
+- name: Create folder-test on the server
+  hosts: pcbox-server-prod
   become: true
   gather_facts: false
 
   tasks:
-    - name: Eliminar /opt/hello
+    - name: Create /home/jhon/folder-test
       ansible.builtin.file:
-        path: /opt/hello
-        state: absent
+        path: /home/jhon/folder-test
+        state: directory
+        mode: '0755'
+        owner: jhon
+        group: jhon
 ```
 
 ## Estructura esperada de un playbook nuevo
@@ -93,15 +96,16 @@ ansible-playbook -i inventory/hosts.yml playbooks/<archivo>.yml -u "$SSH_USER" \
 ```
 
 en cada push a `master`. Hoy el workflow apunta a un único playbook
-(`crear-carpeta.yml`) — si se agrega uno nuevo que también deba correr en
-cada deploy, hay que sumarlo (o reemplazarlo) ahí explícitamente.
+(`add-configuration/create-folder-test.yml`) — si se agrega uno nuevo que
+también deba correr en cada deploy, hay que sumarlo (o reemplazarlo) ahí
+explícitamente.
 
 ## Pedir aprobación antes de crear o modificar un playbook
 
 No se crea ni se modifica ningún archivo de `playbooks/` sin aprobación
 explícita previa. Antes de tocar código, explicar en el chat:
 
-- **Qué** archivo se va a crear o modificar (ej. `playbooks/instalar-microk8s.yml`).
+- **Qué** archivo se va a crear o modificar (ej. `playbooks/installations/install-microk8s.yml`).
 - **Qué tareas** va a tener (o qué tareas cambian, si ya existe).
 - **Por qué** esa forma de resolverlo — qué regla de la sección "Reglas no
   negociables" de arriba cumple, y qué alternativa se descartó (si hubo una).
