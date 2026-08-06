@@ -94,7 +94,7 @@ servidor es el que ya existe desde el bootstrap
 sobre este clúster y necesite alcance externo deberá decidir explícitamente
 cómo exponerse — eso queda fuera del alcance de este documento.
 
-## 6. Cómo lo corre el gate de CI
+## 6. Cómo lo corre el gate de  CI
 
 `.github/workflows/deploy.yml` corre en cada push a `master`
 (y manualmente vía `workflow_dispatch`), en dos jobs:
