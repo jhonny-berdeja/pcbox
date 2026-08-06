@@ -29,7 +29,9 @@ SSH_USER=jhon
 
 ## 1. Instalar OpenSSH en el Ubuntu Server
 
-Para poder conectarse por SSH a este servidor. Se hace conectándose directamente a la compu (teclado/monitor) o por la red local:
+Como el servidor todavía no tiene SSH instalado, no se puede entrar por red — hay que conectarle un teclado y un monitor directamente, y conectarlo a internet (cable de red o WiFi, según lo que tenga disponible) para poder descargar el paquete.
+
+Ya con acceso directo a la terminal del servidor:
 
 ```bash
 sudo apt update
@@ -64,7 +66,13 @@ Esta IP se usa para conectarse por SSH en los pasos siguientes (por ejemplo, par
 
 ## 2. Instalar y configurar Tailscale
 
-Para autenticar al servidor en la red de Tailscale (así el runner de GitHub Actions lo puede alcanzar sin exponer el servidor a internet).
+Con OpenSSH ya instalado (paso 1) y la IP local guardada, ya no hace falta teclado ni monitor — de acá en adelante se trabaja conectándose por SSH desde una PC cliente:
+
+```bash
+ssh jhon@IP_LOCAL_DEL_SERVIDOR
+```
+
+(pide la contraseña configurada en el paso 0). Ya conectado al servidor por SSH, instalar y configurar Tailscale, para autenticar al servidor en la red de Tailscale (así el runner de GitHub Actions lo puede alcanzar sin exponer el servidor a internet):
 
 ```bash
 curl -fsSL https://tailscale.com/install.sh | sh
@@ -86,32 +94,46 @@ tailscale status
 
 Ahí va a aparecer el servidor `pcbox` listado junto a su IP `100.x.x.x`. También se puede ver desde la [consola web de Tailscale](https://login.tailscale.com/admin/machines). **Guardar esta IP**, es la que se va a usar como valor del secret `SSH_HOST` en GitHub Actions más adelante.
 
+Para probar que la conexión funciona ahora por Tailscale (en vez de por la red local), desde la misma PC cliente:
+
+```bash
+ssh jhon@IP_TAILSCALE
+```
+
+Si conecta usando esa IP, Tailscale quedó bien configurado en el servidor.
+
 ## 3. Configurar una llave privada y pública para conectarse por SSH sin contraseña
 
-GitHub Actions no puede tipear una contraseña, así que necesita conectarse por clave SSH, no por password. Si hoy se entra con contraseña, hacer esto una sola vez:
+Esta configuración se hace conectándose por SSH ya sobre la red de Tailscale, usando la IP `100.x.x.x` obtenida en el paso 2 (no hace falta estar en la misma red local que el servidor).
+
+GitHub Actions no puede tipear una contraseña, así que necesita conectarse por clave SSH, no por password. Si hoy se entra con contraseña, hacer esto una sola vez, desde la PC cliente:
 
 ```bash
 ssh-keygen -t ed25519 -f ./deploy_key -N ""
-ssh-copy-id -i deploy_key.pub usuario@IP_DEL_SERVIDOR
+ssh-copy-id -i deploy_key.pub jhon@IP_TAILSCALE
 ```
 
-`usuario` es el usuario del servidor con el que nos conectamos por SSH (el mismo que se guardó en el paso 4 con permisos de sudo sin contraseña) — este es el valor que va a ir en el secret `SSH_USER` más adelante. `IP_DEL_SERVIDOR` es la IP obtenida en el paso 1 (o ya la de Tailscale del paso 2, si el servidor ya está en la tailnet).
+(Si ya existe una clave que se usa para conectarse al servidor, se puede saltar el `ssh-keygen` y pasar directo al `ssh-copy-id` con esa clave.)
 
-Este comando genera dos archivos: `deploy_key` (la clave **privada**) y `deploy_key.pub` (la clave **pública**, que es la que se copia al servidor). La clave privada, `deploy_key`, es la que va a usar GitHub Actions para autenticarse por SSH sin contraseña — este archivo **no se sube al repo** (está en `.gitignore`), su contenido se pega directo en el secret `SSH_PRIVATE_KEY` más adelante.
+`jhon` es el usuario del servidor (paso 0) — es el valor del secret `SSH_USER`. `IP_TAILSCALE` es la IP obtenida en el paso 2 — es el valor del secret `SSH_HOST`.
 
-Probar que funciona sin pedir password:
+Este comando genera dos archivos: `deploy_key` (la clave **privada**) y `deploy_key.pub` (la clave **pública**, que es la que se copia al servidor). La clave privada, `deploy_key`, es la que va a usar GitHub Actions para autenticarse por SSH sin contraseña — este archivo **no se sube al repo** (está en `.gitignore`).
+
+Probar que la conexión funciona con la clave privada, sin que pida contraseña:
 
 ```bash
-ssh -i deploy_key usuario@IP_DEL_SERVIDOR
+ssh -i deploy_key jhon@IP_TAILSCALE
 ```
 
-Si ya existe una clave que se usa para conectarse, se puede saltar directo al paso 1.
+Si conecta sin pedir password, la clave quedó bien configurada.
 
-Para ver la clave privada que va a usar GitHub Actions para conectarse al servidor por SSH sin contraseña (sino por clave privada), y así cargarla en el secret `SSH_PRIVATE_KEY`:
+Para ver el contenido de la clave privada y poder usarla desde otro cliente — en este caso, para pegarla en el secret `SSH_PRIVATE_KEY` de GitHub Actions:
 
 ```bash
 cat deploy_key
 ```
+
+Copiar toda la salida, incluyendo las líneas `-----BEGIN...-----` y `-----END...-----`, y pegarla completa como valor del secret.
 
 ## 4. Configurar el usuario para que no tenga que escribir la contraseña de sudo
 
