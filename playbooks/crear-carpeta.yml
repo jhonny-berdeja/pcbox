@@ -1,6 +1,6 @@
 ---
 - name: Crear carpeta en el servidor
-  hosts: all
+  hosts: pcbox-server-prod
   become: true
   gather_facts: false
 
