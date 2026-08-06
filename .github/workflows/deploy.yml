@@ -31,7 +31,7 @@ jobs:
 
       - name: Ejecutar playbook
         run: |
-          ansible-playbook -i inventory/hosts.yml playbooks/crear-carpeta.yml \
+          ansible-playbook -i inventory/hosts.yml playbooks/add-configuration/create-folder-test.yml \
             -u "${{ secrets.SSH_USER }}" \
             --private-key ~/.ssh/deploy_key \
             -e "ansible_host=${{ secrets.SSH_HOST }}"
