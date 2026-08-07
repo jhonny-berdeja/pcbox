@@ -42,20 +42,8 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Dry-run de install-microk8s.yml (--check --diff)
-        continue-on-error: true
-        run: |
-          ansible-playbook -i inventory/hosts.yml playbooks/installations/install-microk8s.yml \
-            -u "${{ secrets.SSH_USER }}" \
-            --private-key ~/.ssh/deploy_key \
-            -e "ansible_host=${{ secrets.SSH_HOST }}" \
-            --check --diff
-
-      - name: Ejecutar playbooks
-        run: |
-          ansible-playbook -i inventory/hosts.yml \
-            playbooks/add-configuration/create-folder-test.yml \
-            playbooks/installations/install-microk8s.yml \
-            -u "${{ secrets.SSH_USER }}" \
-            --private-key ~/.ssh/deploy_key \
-            -e "ansible_host=${{ secrets.SSH_HOST }}"
+      - name: Deploy playbooks a pcbox
+        uses: ./.github/actions/ansible-deploy
+        with:
+          ssh-user: ${{ secrets.SSH_USER }}
+          ssh-host: ${{ secrets.SSH_HOST }}

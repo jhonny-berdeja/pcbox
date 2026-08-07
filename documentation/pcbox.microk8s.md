@@ -104,20 +104,25 @@ cómo exponerse — eso queda fuera del alcance de este documento.
    default) sobre `playbooks/installations/install-microk8s.yml`. Si falla,
    el job de deploy no arranca.
 2. **`ansible-deploy`** (depende de `lint` vía `needs: lint`): se conecta al
-   servidor por Tailscale y clave SSH, corre un paso `--check --diff` de
-   visibilidad sobre `install-microk8s.yml` (dry-run; no bloqueante —
-   `continue-on-error: true`, porque la tarea que agrega el usuario al grupo
-   `microk8s` falla en modo `--check` en un host donde microk8s todavía no
-   está instalado, ya que el grupo lo crea el propio snap), y recién después
-   aplica los playbooks encadenados en una sola invocación:
+   servidor por Tailscale y clave SSH, y recién después llama a una
+   composite action local en un único paso:
+   [`.github/actions/ansible-deploy`](../.github/actions/ansible-deploy/action.yml)
+   (`uses: ./.github/actions/ansible-deploy`, con `ssh-user`/`ssh-host`
+   pasados por `with:` desde `secrets.SSH_USER`/`secrets.SSH_HOST` — una
+   composite action no puede leer `secrets.*` directamente). Adentro de esa
+   acción hay dos pasos, con nombres y comportamiento idénticos a como
+   estaban antes en `deploy.yml`:
 
-```bash
-ansible-playbook -i inventory/hosts.yml \
-  playbooks/add-configuration/create-folder-test.yml \
-  playbooks/installations/install-microk8s.yml \
-  -u "$SSH_USER" --private-key ~/.ssh/deploy_key -e "ansible_host=$SSH_HOST"
-```
+   1. `Dry-run de install-microk8s.yml (--check --diff)` — `continue-on-error: true`,
+      porque la tarea que agrega el usuario al grupo `microk8s` falla en
+      modo `--check` en un host donde microk8s todavía no está instalado, ya
+      que el grupo lo crea el propio snap.
+   2. `Ejecutar playbooks` — aplica los playbooks encadenados en una sola
+      invocación de `ansible-playbook`: `remove-folder-test.yml` primero,
+      seguido de `install-microk8s.yml`, para compartir el mismo contexto
+      SSH y no duplicar el paso de conexión.
 
-`create-folder-test.yml` sigue corriendo primero, sin modificar; el nuevo
-`install-microk8s.yml` se agrega a continuación en la misma invocación, para
-compartir el mismo contexto SSH y no duplicar el paso de conexión.
+`deploy.yml` en sí mismo no lista playbooks — si se agrega uno nuevo que
+también deba correr en cada deploy, se edita **solo**
+`.github/actions/ansible-deploy/action.yml` (el paso "Ejecutar playbooks", y
+su contraparte de dry-run si corresponde); `deploy.yml` no cambia.

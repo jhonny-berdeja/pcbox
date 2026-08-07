@@ -1,0 +1,42 @@
+name: 'Deploy playbooks a pcbox'
+description: >-
+  Corre el dry-run (--check --diff) y el apply real de los playbooks de
+  pcbox contra pcbox-server-prod. Asume que quien la invoca ya corrió los
+  pasos de conexión (Tailscale) y ya escribió la clave privada en
+  ~/.ssh/deploy_key (paso "Configurar clave SSH" de deploy.yml) — esta
+  acción no gestiona esa parte.
+#
+# Para agregar un playbook nuevo al deploy: editar el paso "Ejecutar
+# playbooks" de ESTE archivo (y su contraparte de dry-run más abajo, si
+# también debe validarse con --check --diff). deploy.yml NO cambia.
+
+inputs:
+  ssh-user:
+    description: 'Usuario SSH del host (valor de secrets.SSH_USER)'
+    required: true
+  ssh-host:
+    description: 'Host de destino, se pasa como ansible_host (valor de secrets.SSH_HOST)'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Dry-run de install-microk8s.yml (--check --diff)
+      shell: bash
+      continue-on-error: true
+      run: |
+        ansible-playbook -i inventory/hosts.yml playbooks/installations/install-microk8s.yml \
+          -u "${{ inputs.ssh-user }}" \
+          --private-key ~/.ssh/deploy_key \
+          -e "ansible_host=${{ inputs.ssh-host }}" \
+          --check --diff
+
+    - name: Ejecutar playbooks
+      shell: bash
+      run: |
+        ansible-playbook -i inventory/hosts.yml \
+          playbooks/remove-configuration/remove-folder-test.yml \
+          playbooks/installations/install-microk8s.yml \
+          -u "${{ inputs.ssh-user }}" \
+          --private-key ~/.ssh/deploy_key \
+          -e "ansible_host=${{ inputs.ssh-host }}"

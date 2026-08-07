@@ -12,22 +12,20 @@ en [`inventory/hosts.yml`](../inventory/hosts.yml)). Un playbook = una
 responsabilidad concreta (instalar algo, configurar algo, eliminar algo) — no
 un "playbook maestro" que hace de todo.
 
-Ejemplo real, [`playbooks/add-configuration/create-folder-test.yml`](../playbooks/add-configuration/create-folder-test.yml):
+Ejemplo real, [`playbooks/remove-configuration/remove-folder-test.yml`](../playbooks/remove-configuration/remove-folder-test.yml):
 
 ```yaml
-- name: Create folder-test on the server
+---
+- name: Remove folder-test from the server
   hosts: pcbox-server-prod
   become: true
   gather_facts: false
 
   tasks:
-    - name: Create /home/jhon/folder-test
+    - name: Delete /home/jhon/folder-test
       ansible.builtin.file:
         path: /home/jhon/folder-test
-        state: directory
-        mode: '0755'
-        owner: jhon
-        group: jhon
+        state: absent
 ```
 
 ## Estructura esperada de un playbook nuevo
@@ -86,6 +84,26 @@ suelto en la raíz de `playbooks/`:
 Si un playbook no encaja claramente en ninguna, va en `add-configuration/` por
 defecto.
 
+### Cambiar de ciclo de vida: borrar y crear, no editar in-place
+
+Cuando un playbook ya aplicado necesita revertirse (lo instalado se
+desinstala, lo agregado se remueve), **no se edita el archivo original para
+que haga lo contrario** — se borra de su subcarpeta actual y se crea un
+archivo nuevo en la subcarpeta opuesta, con nombre y `name:` que describan la
+acción inversa:
+
+- `installations/instalar-algo.yml` → se borra, se crea
+  `uninstalls/desinstalar-algo.yml`.
+- `add-configuration/agregar-algo.yml` → se borra, se crea
+  `remove-configuration/quitar-algo.yml`.
+
+Esto mantiene cada archivo fiel a su subcarpeta (un playbook en
+`installations/` siempre instala, nunca desinstala) y deja rastro en el
+historial de git de cuándo se revirtió cada cosa. Ejemplo real: la carpeta
+creada por `add-configuration/create-folder-test.yml` se revirtió borrando
+ese archivo y creando
+[`remove-configuration/remove-folder-test.yml`](../playbooks/remove-configuration/remove-folder-test.yml).
+
 ## Cómo se ejecutan
 
 Vía `.github/workflows/deploy.yml`, en cada push a `master` (y manualmente
@@ -96,21 +114,19 @@ vía `workflow_dispatch`), en dos jobs:
    default) sobre los playbooks cubiertos por el gate. Si falla, el job de
    deploy no arranca (`needs: lint`).
 2. **`ansible-deploy`** (depende de `lint`): se conecta al servidor por
-   Tailscale y clave SSH, corre un paso `--check --diff` de visibilidad
-   (dry-run, no bloqueante) y recién después aplica los playbooks
-   encadenados en una sola invocación:
+   Tailscale y clave SSH, y recién después delega el `--check --diff` de
+   visibilidad (dry-run, no bloqueante) y el apply real a una composite
+   action local: [`.github/actions/ansible-deploy`](../.github/actions/ansible-deploy/action.yml),
+   invocada como un único paso `uses: ./.github/actions/ansible-deploy` con
+   `ssh-user`/`ssh-host` pasados por `with:` (una composite action no puede
+   leer `secrets.*` directamente).
 
-```bash
-ansible-playbook -i inventory/hosts.yml \
-  playbooks/add-configuration/create-folder-test.yml \
-  playbooks/installations/install-microk8s.yml \
-  -u "$SSH_USER" --private-key ~/.ssh/deploy_key -e "ansible_host=$SSH_HOST"
-```
-
-Hoy el workflow corre dos playbooks encadenados en esa misma invocación
-(`create-folder-test.yml` primero, sin modificar, seguido de
-`install-microk8s.yml`) — si se agrega uno nuevo que también deba correr en
-cada deploy, hay que sumarlo a esa lista explícitamente.
+`deploy.yml` no lista los playbooks — eso vive adentro de `action.yml`, que
+hoy corre `remove-folder-test.yml` primero, seguido de
+`install-microk8s.yml`, en el paso "Ejecutar playbooks". Si se agrega un
+playbook nuevo que también deba correr en cada deploy, se edita **solo**
+`action.yml` (ese paso, y su contraparte de dry-run si corresponde) —
+`deploy.yml` no cambia.
 
 ## Pedir aprobación antes de crear o modificar un playbook
 

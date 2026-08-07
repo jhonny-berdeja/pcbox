@@ -1,0 +1,11 @@
+---
+- name: Remove folder-test from the server
+  hosts: pcbox-server-prod
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Delete /home/jhon/folder-test
+      ansible.builtin.file:
+        path: /home/jhon/folder-test
+        state: absent
