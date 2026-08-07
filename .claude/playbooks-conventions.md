@@ -62,7 +62,7 @@ Ejemplo real, [`playbooks/remove-configuration/remove-folder-test.yml`](../playb
 ## Naming
 
 `verbo-objetivo.yml` en ingles, minúsculas, guiones (ej. `create-folder.yml`,
-`install-microk8s.yml`) — igual que el resto del repo.
+`uninstall-microk8s.yml`) — igual que el resto del repo.
 
 ## Subcarpetas de `playbooks/`
 
@@ -99,10 +99,16 @@ acción inversa:
 
 Esto mantiene cada archivo fiel a su subcarpeta (un playbook en
 `installations/` siempre instala, nunca desinstala) y deja rastro en el
-historial de git de cuándo se revirtió cada cosa. Ejemplo real: la carpeta
-creada por `add-configuration/create-folder-test.yml` se revirtió borrando
-ese archivo y creando
-[`remove-configuration/remove-folder-test.yml`](../playbooks/remove-configuration/remove-folder-test.yml).
+historial de git de cuándo se revirtió cada cosa. Ejemplos reales:
+
+- La carpeta creada por `add-configuration/create-folder-test.yml` se
+  revirtió borrando ese archivo y creando
+  [`remove-configuration/remove-folder-test.yml`](../playbooks/remove-configuration/remove-folder-test.yml).
+- microk8s, instalado por `installations/install-microk8s.yml`, se revirtió
+  borrando ese archivo y creando
+  [`uninstalls/uninstall-microk8s.yml`](../playbooks/uninstalls/uninstall-microk8s.yml)
+  (usa el mismo patrón de comando raw guardado por `snap list` que ya
+  establecía el playbook original para `microk8s status --wait-ready`).
 
 ## Cómo se ejecutan
 
@@ -121,12 +127,14 @@ vía `workflow_dispatch`), en dos jobs:
    `ssh-user`/`ssh-host` pasados por `with:` (una composite action no puede
    leer `secrets.*` directamente).
 
-`deploy.yml` no lista los playbooks — eso vive adentro de `action.yml`, que
-hoy corre `remove-folder-test.yml` primero, seguido de
-`install-microk8s.yml`, en el paso "Ejecutar playbooks". Si se agrega un
-playbook nuevo que también deba correr en cada deploy, se edita **solo**
-`action.yml` (ese paso, y su contraparte de dry-run si corresponde) —
-`deploy.yml` no cambia.
+`deploy.yml` casi no lista playbooks — con una excepción, el job `lint`
+tiene hardcodeada la ruta del playbook que corre `ansible-lint` (hoy
+`playbooks/uninstalls/uninstall-microk8s.yml`). El resto vive adentro de
+`action.yml`, que hoy corre `remove-folder-test.yml` primero, seguido de
+`uninstall-microk8s.yml`, en el paso "Ejecutar playbooks". Si se agrega un
+playbook nuevo que también deba correr en cada deploy, se edita **tanto**
+`action.yml` (ese paso, y su contraparte de dry-run si corresponde) **como**
+esa línea de `deploy.yml` si también hay que lintearlo.
 
 ## Pedir aprobación antes de crear o modificar un playbook
 

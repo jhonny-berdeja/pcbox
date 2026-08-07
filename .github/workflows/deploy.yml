@@ -16,7 +16,7 @@ jobs:
         run: pip install ansible ansible-lint
 
       - name: Ejecutar ansible-lint
-        run: ansible-lint playbooks/installations/install-microk8s.yml
+        run: ansible-lint playbooks/uninstalls/uninstall-microk8s.yml
 
   ansible-deploy:
     needs: lint

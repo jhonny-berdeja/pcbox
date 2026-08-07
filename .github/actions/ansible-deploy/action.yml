@@ -21,11 +21,11 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Dry-run de install-microk8s.yml (--check --diff)
+    - name: Dry-run de uninstall-microk8s.yml (--check --diff)
       shell: bash
       continue-on-error: true
       run: |
-        ansible-playbook -i inventory/hosts.yml playbooks/installations/install-microk8s.yml \
+        ansible-playbook -i inventory/hosts.yml playbooks/uninstalls/uninstall-microk8s.yml \
           -u "${{ inputs.ssh-user }}" \
           --private-key ~/.ssh/deploy_key \
           -e "ansible_host=${{ inputs.ssh-host }}" \
@@ -36,7 +36,7 @@ runs:
       run: |
         ansible-playbook -i inventory/hosts.yml \
           playbooks/remove-configuration/remove-folder-test.yml \
-          playbooks/installations/install-microk8s.yml \
+          playbooks/uninstalls/uninstall-microk8s.yml \
           -u "${{ inputs.ssh-user }}" \
           --private-key ~/.ssh/deploy_key \
           -e "ansible_host=${{ inputs.ssh-host }}"
